@@ -28,12 +28,14 @@ if (result.patched.length + result.unchanged.length === 0) {
 // rather than "Console Window Host"; conhost is the fallback if it can't be built.
 const host = buildLauncherHost({ out: path.join(projectDir, 'discord-no-yt-ads.exe'), icon: path.join(discordRoot, 'app.ico') });
 if (!host) console.log('note: could not build the launcher program; using conhost (Startup apps will say "Console Window Host")');
-const cmd = launcherCommand({
+const launcher = {
   host,
   conhost: path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'conhost.exe'),
   node: process.execPath,
   script: path.join(projectDir, 'bin', 'launch.js'),
-});
+};
+const cmd = launcherCommand(launcher); // shortcuts: open Discord normally
+const loginCmd = launcherCommand({ ...launcher, atLogin: true }); // login entry: like Discord's own (inactive / minimized)
 for (const lnk of win.shortcutPaths()) {
   // Working directory deliberately NOT the project folder: a live process's cwd
   // locks that folder, which would block the one-shot installer's update swap.
@@ -48,8 +50,8 @@ const plan = planAutostart({
   discordRunning: win.discordRunning(),
 });
 if (plan.ourEntry) {
-  win.setRunValue(win.RUN_VALUE, cmd.commandLine);
-  console.log(`login entry: ${cmd.commandLine}`);
+  win.setRunValue(win.RUN_VALUE, loginCmd.commandLine);
+  console.log(`login entry: ${loginCmd.commandLine}`);
 } else {
   win.removeRunValue(win.RUN_VALUE);
   console.log('login entry: none (Discord was not set to start at login)');

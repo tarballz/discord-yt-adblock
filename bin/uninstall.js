@@ -4,7 +4,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { removeAll } = require('../src/patch.js');
-const { setOpenOnStartup } = require('../src/autostart.js');
+const { setOpenOnStartup, readStartMinimized } = require('../src/autostart.js');
+const { discordAutostartCommand } = require('../src/startup.js');
 const win = require('./_windows.js');
 
 // Written first: tells a running injector / launcher watch to stop re-patching.
@@ -24,8 +25,11 @@ if (hadLoginEntry) {
   // We took start-at-login over from Discord on install; give it back.
   if (!win.discordRunning()) {
     setOpenOnStartup(win.discordSettingsFile(), true);
-    const updateExe = path.join(process.env.LOCALAPPDATA, 'Discord', 'Update.exe');
-    win.setRunValue('Discord', `"${updateExe}" --processStart Discord.exe`);
+    // Exactly what Discord itself writes: its root launcher if present, else Update.exe.
+    const discordRoot = path.join(process.env.LOCALAPPDATA, 'Discord');
+    const rootLauncher = path.join(discordRoot, 'Discord.exe');
+    const targetExe = fs.existsSync(rootLauncher) ? rootLauncher : path.join(discordRoot, 'Update.exe');
+    win.setRunValue('Discord', discordAutostartCommand({ targetExe, startMinimized: readStartMinimized(win.discordSettingsFile()) }));
     console.log('gave start-at-login back to Discord');
   } else {
     console.log('removed login entry; turn "Open Discord" back on in Discord\'s Windows Settings to start it at login');

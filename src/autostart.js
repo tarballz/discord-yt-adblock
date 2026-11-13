@@ -31,4 +31,13 @@ function planAutostart({ discordAutostart, ourEntry, discordRunning }) {
   };
 }
 
-module.exports = { setOpenOnStartup, planAutostart };
+/** Discord's "Start Minimized" setting (START_MINIMIZED); off if unset or unreadable. */
+function readStartMinimized(settingsFile) {
+  try {
+    return JSON.parse(fs.readFileSync(settingsFile, 'utf8')).START_MINIMIZED === true;
+  } catch {
+    return false;
+  }
+}
+
+module.exports = { setOpenOnStartup, planAutostart, readStartMinimized };

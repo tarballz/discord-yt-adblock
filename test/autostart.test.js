@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { setOpenOnStartup, planAutostart } = require('../src/autostart.js');
+const { setOpenOnStartup, planAutostart, readStartMinimized } = require('../src/autostart.js');
 const { makeTempDir } = require('./helpers.js');
 
 // Trimmed copy of a real %APPDATA%\discord\settings.json (values made up).
@@ -67,3 +67,11 @@ for (const [name, state, expected] of plans) {
     assert.deepEqual(planAutostart(state), expected);
   });
 }
+
+test('readStartMinimized reflects Discord’s "Start Minimized" setting, defaulting to off', (t) => {
+  assert.equal(readStartMinimized(writeSettings(t, JSON.stringify({ ...SETTINGS, START_MINIMIZED: true }))), true);
+  assert.equal(readStartMinimized(writeSettings(t, JSON.stringify({ ...SETTINGS, START_MINIMIZED: false }))), false);
+  assert.equal(readStartMinimized(writeSettings(t)), false); // never set
+  assert.equal(readStartMinimized(writeSettings(t, '{ broken')), false);
+  assert.equal(readStartMinimized(path.join(makeTempDir(t), 'missing.json')), false);
+});
