@@ -1,0 +1,5 @@
+logs/
+/debug
+/disabled
+/uninstalled
+node_modules/

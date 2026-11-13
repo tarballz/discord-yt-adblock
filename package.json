@@ -1,0 +1,15 @@
+{
+  "name": "discord-yt-adblock",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Blocks YouTube ads inside the Discord desktop client (Watch Together + chat embeds) by injecting AdGuard's YouTube script into YouTube embed frames.",
+  "license": "GPL-3.0-or-later",
+  "type": "commonjs",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test \"test/**/*.test.js\"",
+    "launch": "node bin/launch.js",
+    "install-patch": "node bin/install.js",
+    "uninstall": "node bin/uninstall.js"
+  }
+}
