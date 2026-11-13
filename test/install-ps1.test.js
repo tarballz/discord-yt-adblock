@@ -47,11 +47,12 @@ function runPs(evidence, args, exe = 'powershell.exe', envOverrides = {}) {
   return { status: r.status, out: `${r.stdout}\n${r.stderr}` };
 }
 
-// Tests run without admin rights, so they opt out of the UAC relaunch.
+// Tests run without admin rights. With Node.js present nothing may ask for
+// elevation: a UAC prompt would hang the test until its timeout.
 const runFile = (fx, extra = [], envOverrides = {}) =>
   runPs(
     fx.evidence,
-    ['-File', INSTALL_PS1, '-InstallDir', fx.installDir, '-Source', fx.zip, '-RestartDiscord', 'No', '-NoElevate', ...extra],
+    ['-File', INSTALL_PS1, '-InstallDir', fx.installDir, '-Source', fx.zip, '-RestartDiscord', 'No', ...extra],
     'powershell.exe',
     envOverrides,
   );
@@ -111,7 +112,7 @@ test('also works in the scriptblock form used with irm (parameters included)', {
 
   const r = runPs(fx.evidence, [
     '-Command',
-    `& ([scriptblock]::Create((Get-Content -Raw -LiteralPath '${INSTALL_PS1}'))) -InstallDir '${fx.installDir}' -Source '${fx.zip}' -RestartDiscord No -NoElevate`,
+    `& ([scriptblock]::Create((Get-Content -Raw -LiteralPath '${INSTALL_PS1}'))) -InstallDir '${fx.installDir}' -Source '${fx.zip}' -RestartDiscord No`,
   ]);
 
   assert.equal(r.status, 0, r.out);
@@ -123,7 +124,7 @@ const hasPwsh = process.platform === 'win32' && spawnSync('pwsh', ['-NoProfile',
 test('also installs under PowerShell 7', { skip: skip || (!hasPwsh && 'pwsh not installed') }, (t) => {
   const fx = fakeArchive(t);
 
-  const r = runPs(fx.evidence, ['-File', INSTALL_PS1, '-InstallDir', fx.installDir, '-Source', fx.zip, '-RestartDiscord', 'No', '-NoElevate'], 'pwsh');
+  const r = runPs(fx.evidence, ['-File', INSTALL_PS1, '-InstallDir', fx.installDir, '-Source', fx.zip, '-RestartDiscord', 'No'], 'pwsh');
 
   assert.equal(r.status, 0, r.out);
   assert.equal(evidence(fx, 'install-ran')?.dir, path.join(fx.installDir, 'bin'));
