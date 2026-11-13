@@ -4,6 +4,30 @@ Blocks YouTube ads inside the Discord desktop client's **Watch Together** activi
 
 > Modifying the Discord client is against Discord's Terms of Service. Use at your own risk.
 
+## Quick install
+
+In PowerShell (Windows PowerShell 5.1 or PowerShell 7):
+
+```powershell
+irm https://raw.githubusercontent.com/tarballz/discord-yt-adblock/master/install.ps1 | iex
+```
+
+The installer:
+
+- checks for Node.js 22+, and offers to install Node.js LTS with `winget` if it's missing;
+- downloads this repo to `%LOCALAPPDATA%\discord-yt-adblock`;
+- patches Discord and adds a **Discord (no YT ads)** shortcut to the Start Menu and Desktop;
+- if Discord was set to start at login, moves that over to the blocker's launcher;
+- offers to restart Discord so ads are blocked right away.
+
+Run the same command again to update. To uninstall:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/tarballz/discord-yt-adblock/master/install.ps1))) -Uninstall
+```
+
+Piping a script from the internet into `iex` runs it with your permissions, so feel free to [read `install.ps1`](install.ps1) first. It's short.
+
 ## How it works
 
 1. A small managed block is added to the top of Discord's `discord_desktop_core\index.js`. It loads `src/injector.js` into Discord's Electron main process, and it's wrapped in `try/catch`, so if this folder disappears Discord still starts normally.
@@ -25,7 +49,7 @@ Discord updates create a fresh `app-1.0.XXXX` folder without the patch. Three th
 - Windows, with the Discord desktop app (stable) installed in the default location (`%LOCALAPPDATA%\Discord`)
 - Node.js 22 or newer. No npm dependencies.
 
-## Install / uninstall
+## Install from a clone (for development)
 
 ```sh
 git clone https://github.com/tarballz/discord-yt-adblock.git
@@ -34,14 +58,13 @@ npm run install-patch   # patch + shortcuts (Start Menu, Desktop) + login entry
 npm run uninstall       # restore Discord's index.js, remove shortcuts + login entry
 ```
 
-After installing:
+Start-at-login is only taken over from Discord while Discord is fully closed, because Discord rewrites its settings file while running. If `install-patch` reports that Discord was running, quit Discord from the tray and run it again.
 
-- Turn off Discord's own start-at-login: **User Settings → Windows Settings → Open Discord**.
-- Pin the **Discord (no YT ads)** shortcut to your taskbar instead of the normal Discord pin.
+Either way, pin the **Discord (no YT ads)** shortcut to your taskbar instead of the normal Discord pin.
 
 ## Flags and logs
 
-Create an empty file named `debug` or `disabled` in this folder to turn a flag on. They're re-read for every frame, so no restart is needed; just reopen the activity.
+Create an empty file named `debug` or `disabled` in the install folder to turn a flag on. That's `%LOCALAPPDATA%\discord-yt-adblock` for the quick install, or your clone. They're re-read for every frame, so no restart is needed; just reopen the activity.
 
 | File | Effect |
 |---|---|
@@ -56,7 +79,7 @@ Logs:
 ## Development
 
 ```sh
-npm test   # node --test, no dependencies
+npm test   # node --test, no dependencies; install.ps1 tests run under Windows PowerShell 5.1
 ```
 
 ## License

@@ -31,17 +31,42 @@ function createShortcut(lnk, { target, args, cwd, icon }) {
   );
 }
 
-function setRunEntry(commandLine) {
-  powershell(`Set-ItemProperty -Path '${RUN_KEY}' -Name '${RUN_VALUE}' -Value $env:DYTA_CMD`, { DYTA_CMD: commandLine });
+// HKCU Run values: ours (RUN_VALUE) and Discord's own ('Discord'). `key` is
+// only overridden by tests, which use a throwaway key.
+function setRunValue(name, commandLine, key = RUN_KEY) {
+  powershell('Set-ItemProperty -Path $env:DYTA_KEY -Name $env:DYTA_NAME -Value $env:DYTA_CMD', {
+    DYTA_KEY: key,
+    DYTA_NAME: name,
+    DYTA_CMD: commandLine,
+  });
 }
 
-function removeRunEntry() {
-  powershell(`Remove-ItemProperty -Path '${RUN_KEY}' -Name '${RUN_VALUE}' -ErrorAction SilentlyContinue`);
+function removeRunValue(name, key = RUN_KEY) {
+  // Checked first: a failed Remove-ItemProperty makes powershell.exe exit 1
+  // even with -ErrorAction SilentlyContinue, and a missing value is normal.
+  powershell(
+    'if (Get-ItemProperty -Path $env:DYTA_KEY -Name $env:DYTA_NAME -ErrorAction SilentlyContinue) { Remove-ItemProperty -Path $env:DYTA_KEY -Name $env:DYTA_NAME }',
+    { DYTA_KEY: key, DYTA_NAME: name },
+  );
 }
 
-/** True while Discord's own "Open Discord" (start at login) setting is on. */
-function discordAutostartEnabled() {
-  return powershell(`[bool](Get-ItemProperty -Path '${RUN_KEY}' -Name 'Discord' -ErrorAction SilentlyContinue)`) === 'True';
+function runValueExists(name, key = RUN_KEY) {
+  return powershell('[bool](Get-ItemProperty -Path $env:DYTA_KEY -Name $env:DYTA_NAME -ErrorAction SilentlyContinue)', { DYTA_KEY: key, DYTA_NAME: name }) === 'True';
 }
 
-module.exports = { shortcutPaths, createShortcut, setRunEntry, removeRunEntry, discordAutostartEnabled };
+function discordRunning() {
+  return powershell("[bool](Get-Process -Name 'Discord' -ErrorAction SilentlyContinue)") === 'True';
+}
+
+const discordSettingsFile = () => path.join(process.env.APPDATA, 'discord', 'settings.json');
+
+module.exports = {
+  RUN_VALUE,
+  shortcutPaths,
+  createShortcut,
+  setRunValue,
+  removeRunValue,
+  runValueExists,
+  discordRunning,
+  discordSettingsFile,
+};

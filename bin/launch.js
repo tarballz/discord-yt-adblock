@@ -40,7 +40,7 @@ if (uninstalled()) {
 
 if (!args['no-start']) {
   const updateExe = path.join(root, 'Update.exe');
-  spawn(updateExe, ['--processStart', 'Discord.exe'], { detached: true, stdio: 'ignore' }).unref();
+  spawn(updateExe, ['--processStart', 'Discord.exe'], { cwd: root, detached: true, stdio: 'ignore' }).unref();
   say(`started ${updateExe} --processStart Discord.exe`);
 }
 
