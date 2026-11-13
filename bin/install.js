@@ -8,6 +8,7 @@ const { applyAll } = require('../src/patch.js');
 const { injectorPath } = require('../src/runtime.js');
 const { launcherCommand } = require('../src/startup.js');
 const { setOpenOnStartup, planAutostart } = require('../src/autostart.js');
+const { buildLauncherHost } = require('../src/launcherHost.js');
 const win = require('./_windows.js');
 
 const projectDir = path.resolve(__dirname, '..');
@@ -23,7 +24,12 @@ if (result.patched.length + result.unchanged.length === 0) {
   process.exit(1);
 }
 
+// Our own small launcher program, so Startup apps lists "Discord (no YT ads)"
+// rather than "Console Window Host"; conhost is the fallback if it can't be built.
+const host = buildLauncherHost({ out: path.join(projectDir, 'discord-no-yt-ads.exe'), icon: path.join(discordRoot, 'app.ico') });
+if (!host) console.log('note: could not build the launcher program; using conhost (Startup apps will say "Console Window Host")');
 const cmd = launcherCommand({
+  host,
   conhost: path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'conhost.exe'),
   node: process.execPath,
   script: path.join(projectDir, 'bin', 'launch.js'),

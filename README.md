@@ -17,7 +17,7 @@ The installer:
 - checks for Node.js 22+, and if it's missing, offers to install it with `winget`. If `winget` itself is missing, it offers to install that first (Microsoft's App Installer). Only this step asks for **administrator rights** (UAC); if Node.js is already installed there's no admin prompt at all;
 - downloads this repo to `%LOCALAPPDATA%\discord-yt-adblock`;
 - patches Discord and adds a **Discord (no YT ads)** shortcut to the Start Menu and Desktop;
-- if Discord was set to start at login, moves that over to the blocker's launcher;
+- if Discord was set to start at login, moves that over to the blocker's launcher. It shows up in Task Manager → Startup apps as **Discord (no YT ads)**: a small launcher program compiled during install with the C# compiler built into Windows;
 - offers to restart Discord so ads are blocked right away.
 
 Run the same command again to update. To uninstall:
