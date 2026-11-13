@@ -109,6 +109,11 @@ function Invoke-DiscordYtAdblockSetup {
                 if (Test-Path -LiteralPath $old) { Move-Item -LiteralPath $old -Destination $InstallDir }
                 throw
             }
+            # Keep the logs (a running Discord may still be writing injector.log).
+            $oldLogs = Join-Path $old 'logs'
+            if ((Test-Path -LiteralPath $oldLogs) -and -not (Test-Path -LiteralPath (Join-Path $InstallDir 'logs'))) {
+                Move-Item -LiteralPath $oldLogs -Destination (Join-Path $InstallDir 'logs') -ErrorAction SilentlyContinue
+            }
         } finally {
             Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction SilentlyContinue
             Remove-Item -LiteralPath $old -Recurse -Force -ErrorAction SilentlyContinue

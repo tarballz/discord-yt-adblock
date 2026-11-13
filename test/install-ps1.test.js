@@ -77,6 +77,17 @@ test('re-running replaces the old files and leaves no staging folders behind', {
   assert.deepEqual(fs.readdirSync(path.dirname(fx.installDir)), ['discord-yt-adblock']);
 });
 
+test('re-running keeps the logs folder, so the running Discord’s log survives an update', { skip }, (t) => {
+  const fx = fakeArchive(t);
+  fs.mkdirSync(path.join(fx.installDir, 'logs'), { recursive: true });
+  fs.writeFileSync(path.join(fx.installDir, 'logs', 'injector.log'), 'loaded into app-1.0.9267\n');
+
+  const r = runFile(fx);
+
+  assert.equal(r.status, 0, r.out);
+  assert.equal(fs.readFileSync(path.join(fx.installDir, 'logs', 'injector.log'), 'utf8'), 'loaded into app-1.0.9267\n');
+});
+
 test('also works in the scriptblock form used with irm (parameters included)', { skip }, (t) => {
   const fx = fakeArchive(t);
 
