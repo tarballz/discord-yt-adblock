@@ -12,15 +12,19 @@ In PowerShell (Windows PowerShell 5.1 or PowerShell 7):
 irm https://raw.githubusercontent.com/tarballz/discord-yt-adblock/master/install.ps1 | iex
 ```
 
-The installer:
+Windows will ask for **administrator rights** (UAC) and the rest runs in a new admin window. The installer:
 
-- checks for Node.js 22+, and offers to install Node.js LTS with `winget` if it's missing;
+- checks for Node.js 22+, and if it's missing, offers to install it with `winget`. If `winget` itself is missing, it offers to install that first (Microsoft's App Installer);
 - downloads this repo to `%LOCALAPPDATA%\discord-yt-adblock`;
 - patches Discord and adds a **Discord (no YT ads)** shortcut to the Start Menu and Desktop;
 - if Discord was set to start at login, moves that over to the blocker's launcher;
-- offers to restart Discord so ads are blocked right away.
+- offers to restart Discord so ads are blocked right away. Discord is started as your normal user, not as admin.
 
-Run the same command again to update. To uninstall:
+Run the same command again to update. If you can't use admin rights but already have Node.js 22+, add `-NoElevate`:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/tarballz/discord-yt-adblock/master/install.ps1))) -NoElevate
+``` To uninstall:
 
 ```powershell
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/tarballz/discord-yt-adblock/master/install.ps1))) -Uninstall

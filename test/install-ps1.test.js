@@ -38,17 +38,35 @@ function fakeArchive(t, { installExit = 0 } = {}) {
   return { base, zip, evidence, installDir };
 }
 
-function runPs(evidence, args, exe = 'powershell.exe') {
+function runPs(evidence, args, exe = 'powershell.exe', envOverrides = {}) {
   const r = spawnSync(exe, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', ...args], {
-    env: { ...process.env, DYTA_TEST_EVIDENCE: evidence },
+    env: { ...process.env, DYTA_TEST_EVIDENCE: evidence, ...envOverrides },
     encoding: 'utf8',
     timeout: 120_000,
   });
   return { status: r.status, out: `${r.stdout}\n${r.stderr}` };
 }
 
-const runFile = (fx, extra = []) =>
-  runPs(fx.evidence, ['-File', INSTALL_PS1, '-InstallDir', fx.installDir, '-Source', fx.zip, '-RestartDiscord', 'No', ...extra]);
+// Tests run without admin rights, so they opt out of the UAC relaunch.
+const runFile = (fx, extra = [], envOverrides = {}) =>
+  runPs(
+    fx.evidence,
+    ['-File', INSTALL_PS1, '-InstallDir', fx.installDir, '-Source', fx.zip, '-RestartDiscord', 'No', '-NoElevate', ...extra],
+    'powershell.exe',
+    envOverrides,
+  );
+
+// A PATH with only Windows itself on it: no node, no winget.
+const WINDIR = process.env.SystemRoot || 'C:\\Windows';
+const BARE_PATH = [`${WINDIR}\\System32`, WINDIR, `${WINDIR}\\System32\\WindowsPowerShell\\v1.0`].join(';');
+
+// A stand-in `winget` that only records that it was called.
+function fakeWinget(fx) {
+  const dir = path.join(fx.base, 'fake-winget');
+  fs.mkdirSync(dir);
+  fs.writeFileSync(path.join(dir, 'winget.cmd'), '@echo %* > "%DYTA_TEST_EVIDENCE%\\winget-called.txt"\r\n');
+  return dir;
+}
 
 const evidence = (fx, name) => {
   const f = path.join(fx.evidence, `${name}.json`);
@@ -93,7 +111,7 @@ test('also works in the scriptblock form used with irm (parameters included)', {
 
   const r = runPs(fx.evidence, [
     '-Command',
-    `& ([scriptblock]::Create((Get-Content -Raw -LiteralPath '${INSTALL_PS1}'))) -InstallDir '${fx.installDir}' -Source '${fx.zip}' -RestartDiscord No`,
+    `& ([scriptblock]::Create((Get-Content -Raw -LiteralPath '${INSTALL_PS1}'))) -InstallDir '${fx.installDir}' -Source '${fx.zip}' -RestartDiscord No -NoElevate`,
   ]);
 
   assert.equal(r.status, 0, r.out);
@@ -105,7 +123,7 @@ const hasPwsh = process.platform === 'win32' && spawnSync('pwsh', ['-NoProfile',
 test('also installs under PowerShell 7', { skip: skip || (!hasPwsh && 'pwsh not installed') }, (t) => {
   const fx = fakeArchive(t);
 
-  const r = runPs(fx.evidence, ['-File', INSTALL_PS1, '-InstallDir', fx.installDir, '-Source', fx.zip, '-RestartDiscord', 'No'], 'pwsh');
+  const r = runPs(fx.evidence, ['-File', INSTALL_PS1, '-InstallDir', fx.installDir, '-Source', fx.zip, '-RestartDiscord', 'No', '-NoElevate'], 'pwsh');
 
   assert.equal(r.status, 0, r.out);
   assert.equal(evidence(fx, 'install-ran')?.dir, path.join(fx.installDir, 'bin'));
@@ -122,6 +140,28 @@ test('a failed download stops with a clear error and leaves an existing install 
   assert.match(r.out, /missing\.zip/);
   assert.equal(fs.readFileSync(path.join(fx.installDir, 'keep.txt'), 'utf8'), 'current install');
   assert.equal(evidence(fx, 'install-ran'), null);
+});
+
+test('no Node.js and no winget: explains winget is missing, installs nothing when the offer is declined', { skip }, (t) => {
+  const fx = fakeArchive(t);
+
+  const r = runFile(fx, [], { PATH: BARE_PATH }); // non-interactive host = the offer is declined
+
+  assert.notEqual(r.status, 0);
+  assert.match(r.out, /winget/i);
+  assert.match(r.out, /(isn't|is not|not) (installed|available|on this PC)/i);
+  assert.equal(fs.existsSync(fx.installDir), false, 'nothing downloaded or installed');
+});
+
+test('no Node.js but winget present: declining leaves winget alone and says how to get Node.js', { skip }, (t) => {
+  const fx = fakeArchive(t);
+
+  const r = runFile(fx, [], { PATH: `${fakeWinget(fx)};${BARE_PATH}` });
+
+  assert.notEqual(r.status, 0);
+  assert.match(r.out, /Node\.js 22/);
+  assert.equal(fs.existsSync(path.join(fx.evidence, 'winget-called.txt')), false, 'winget must not run without consent');
+  assert.equal(fs.existsSync(fx.installDir), false);
 });
 
 test('a failing installer step makes the script fail too', { skip }, (t) => {
